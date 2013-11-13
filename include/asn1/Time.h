@@ -16,7 +16,7 @@ enum class Basic {
   RecInterval
 };
 
-enum class DateScale {
+enum class DateAccuracy {
   C,
   Y,
   YM,
@@ -46,6 +46,7 @@ namespace TimeAccuracy {
     HMS = H|M|S,
     DIGITS = 0xfffffff
   };
+  inline TimeAccuracy_ F(int n) { return n; }
   inline TimeAccuracy_ HF(int n) { return H|n; }
   inline TimeAccuracy_ HMF(int n) { return H|M|n; }
   inline TimeAccuracy_ HMSF(int n) { return H|M|S|n; }
@@ -87,7 +88,7 @@ class Time
 {
 private:
   Basic         _basic;
-  DateScale     _date_scale;
+  DateAccuracy  _date_scale;
   YearType_     _year_type;
   TimeAccuracy_ _time_accuracy;
   LocalOrUTC    _local_or_utc;
@@ -139,8 +140,44 @@ private:
   unsigned _hours;
   unsigned _minutes;
   unsigned _seconds;
-  unsigned _fraction_digits;
   unsigned _fraction;
+
+public:
+  Duration() : _years(0), _months(0), _weeks(0), _days(0),
+	       _hours(0), _minutes(0), _seconds(0), _fraction(0)
+  {}
+  Duration(const Duration &o)
+    : _years(o._years), _months(o._months), _weeks(o._months), _days(o._days),
+      _hours(o._hours), _minutes(o._minutes), _seconds(o._seconds),
+      _fraction(o._fraction)
+  {}
+
+  Duration &operator=(const Duration &o) {
+    _years = o._years; _months = o._months; _weeks = o._weeks; _days = o._days;
+    _hours = o._hours; _minutes = o._minutes; _seconds = o._seconds;
+    _fraction = o._fraction;
+  }
+
+  unsigned years() const { return _years; }
+  unsigned months() const { return _months; }
+  unsigned weeks() const { return _weeks; }
+  unsigned days() const { return _days; }
+  unsigned hours() const { return _hours; }
+  unsigned minutes() const { return _minutes; }
+  unsigned seconds() const { return _seconds; }
+  unsigned fraction() const { return _fraction; }
+  
+  void set_years(unsigned y) { _years = y; }
+  void set_months(unsigned m) { _months = m; }
+  void set_weeks(unsigned w) { _weeks = w; }
+  void set_days(unsigned d) { _days = d; }
+  void set_hours(unsigned h) { _hours = h; }
+  void set_minutes(unsigned m) { _minutes = m; }
+  void set_seconds(unsigned s) { _seconds = s; }
+  void set_fraction(unsigned f) { _fraction = f; }
+  
+  static Duration from_string(const std::string &s);
+  std::string to_string() const;
 };
 
 class GeneralizedTime

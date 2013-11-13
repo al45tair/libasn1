@@ -6,7 +6,7 @@
 
 using namespace asn1;
 
-/* .. Utilities .............................................................. */
+/* .. Utilities ............................................................. */
 
 static const unsigned days_in_month[12] = {
   31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
@@ -48,6 +48,33 @@ unsigned scan4 (std::string::const_iterator &i)
 }
 
 static
+unsigned scan_digits (std::string::const_iterator &i,
+		      std::string::const_iterator e,
+		      unsigned max = 9)
+{
+  unsigned dc = 0;
+  unsigned r = 0;
+
+  while (i < e) {
+    char c = *i;
+
+    if (c < '0' || c > '9')
+      break;
+
+    ++dc;
+    r = r * 10 + c - '0';
+
+    if (dc == max)
+      break;
+  }
+
+  if (!dc)
+    throw std::runtime_error("bad time - expected digits");
+
+  return r;
+}
+
+static
 unsigned tenpow (unsigned n)
 {
   unsigned p = 10;
@@ -63,7 +90,7 @@ unsigned tenpow (unsigned n)
   return r;
 }
 
-/* .. UTCTime ................................................................ */
+/* .. UTCTime .............................................................. */
 
 UTCTime
 UTCTime::now()
@@ -247,7 +274,7 @@ UTCTime::from_string (const std::string &sz)
   return u;
 }
 
-/* .. GeneralizedTime ........................................................ */
+/* .. GeneralizedTime ....................................................... */
 
 GeneralizedTime
 GeneralizedTime::now()
@@ -526,4 +553,90 @@ GeneralizedTime::from_string (const std::string &sz)
   g.set_utc_offset(utc_offset);
 
   return g;
+}
+
+/* .. Duration .............................................................. */
+
+Duration
+Duration::from_string(const std::string &sz)
+{
+  auto i = sz.begin(), e = sz.end();
+  bool has_specifier = false;
+  bool has_y = false, has_m = false, has_w = false, has_d = false;
+  bool has_h = false, has_min = false, has_s = false, has_f = false;
+  unsigned y, m, w, d, h, min, s, f = 0;
+
+  if (i >= e || *i++ != 'P')
+    throw std::runtime_error("bad Duration - expected duration designator");
+
+  if (i >= e)
+    throw std::runtime_error("bad Duration - at least one specifier required");
+
+  while (i < e && *i != 'T') {
+    unsigned digits = scan_digits (i, e);
+
+    if (i >= e)
+      throw std::runtime_error("bad Duration - missing time-unit designator");
+
+    char c = *i++;
+
+    if ((c != 'W' && has_w)
+	|| (c == 'W' && has_specifier)) {
+      throw std::runtime_error("bad Duration - if used, week specifiers "
+			       "must be the only specifier present");
+    }
+
+    switch (c) {
+    case 'W': has_w = true; w = digits; break;
+    case 'Y':
+      if (has_y) throw std::runtime_error("bad Duration - repeated year");
+      has_y = true; y = digits; break;
+    case 'M':
+      if (has_m) throw std::runtime_error("bad Duration - repeated month");
+      has_m = true; m = digits; break;
+    case 'D':
+      if (has_d) throw std::runtime_error("bad Duration - repeated day");
+      has_d = true; d = digits; break;
+    default:
+      throw std::runtime_error("bad Duration - unrecognised designator");
+    }
+
+    has_specifier = true;
+  }
+
+  if (*i == 'T') {
+    ++i;
+    while (i < e && !has_f) {
+      unsigned digits = scan_digits (i, e);
+
+      if (i >= e)
+	throw std::runtime_error("bad Duration - missing time-unit designator");
+
+      char c = *i++;
+
+      if (c == ',' || c == '.') {
+	f = scan_digits (i, e);
+	has_f = true;
+      }
+
+      switch (c) {
+      case 'H':
+	if (has_h) throw std::runtime_error("bad Duration - repeated hour");
+	has_h = true; h = digits; break;
+      case 'M': 
+	if (has_min) throw std::runtime_error("bad Duration - repeated minute");
+	has_min = true; min = digits; break;
+      case 'S': 
+	if (has_s) throw std::runtime_error("bad Duration - repeated second");
+	has_s = true; s = digits; break;
+      default:
+	throw std::runtime_error("bad Duration - unrecognised designator");
+      }
+    }
+  }
+
+  if (i != e)
+    throw std::runtime_error("bad Duration - garbage after end");
+
+  
 }
