@@ -1,0 +1,10 @@
+syntax: glob
+
+.DS_Store
+.sconsign.dblite
+*~
+*.o
+*.a
+samples/der
+samples/iso2022
+samples/stringtest
